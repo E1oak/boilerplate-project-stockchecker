@@ -12,22 +12,15 @@ const runner = require('./test-runner');
 
 const app = express();
 
-// 1. PARCHE PARA TÚNELES (Ngrok / Localtunnel)
-// Esto debe ir ANTES de cualquier otro middleware para evitar bloqueos de red
+// A. PARCHE DE RED (Para que Localtunnel no muera)
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, ngrok-skip-browser-warning");
-  res.header("ngrok-skip-browser-warning", "true");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Bypass-Tunnel-Reminder");
   res.header("Bypass-Tunnel-Reminder", "true");
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
   next();
 });
 
-// 2. CONFIGURACIÓN DE SEGURIDAD (TEST 2)
-// El test de freeCodeCamp es muy estricto con esta sintaxis exacta
+// B. TEST 2: Helmet CSP (Sintaxis ultra-compatible)
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
@@ -37,47 +30,33 @@ app.use(helmet.contentSecurityPolicy({
 }));
 
 app.use('/public', express.static(process.cwd() + '/public'));
-
-app.use(cors({origin: '*'})); // For fcc testing purposes only
-
+app.use(cors({origin: '*'})); 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Index page (static HTML)
-app.route('/')
-  .get(function (req, res) {
-    res.sendFile(process.cwd() + '/views/index.html');
-  });
-
-// For FCC testing purposes
-fccTestingRoutes(app);
-
-// Routing for API 
-apiRoutes(app);  
-    
-// 404 Not Found Middleware
-app.use(function(req, res, next) {
-  res.status(404)
-    .type('text')
-    .send('Not Found');
+app.route('/').get((req, res) => {
+  res.sendFile(process.cwd() + '/views/index.html');
 });
 
-// Start our server and tests!
-const listener = app.listen(process.env.PORT || 3000, function () {
-  console.log('Servidor escuchando en puerto ' + listener.address().port);
-  
-  // EL TEST 7 DEPENDE DE QUE ESTO SE EJECUTE
-  if(process.env.NODE_ENV === 'test') {
-    console.log('Ejecutando Tests Funcionales...');
-    setTimeout(function () {
+fccTestingRoutes(app);
+apiRoutes(app);  
+    
+app.use((req, res) => {
+  res.status(404).type('text').send('Not Found');
+});
+
+const listener = app.listen(process.env.PORT || 3000, () => {
+  console.log('Servidor en puerto ' + listener.address().port);
+  if (process.env.NODE_ENV === 'test') {
+    console.log('Ejecutando tests funcionales...');
+    setTimeout(() => {
       try {
         runner.run();
       } catch(e) {
-        console.log('Tests no válidos:');
-        console.error(e);
+        console.log('Error en tests');
       }
-    }, 2500);
+    }, 3500);
   }
 });
 
-module.exports = app; // For testing
+module.exports = app;
