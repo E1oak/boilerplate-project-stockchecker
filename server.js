@@ -1,7 +1,6 @@
 'use strict';
 
 require('dotenv').config();
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -13,83 +12,57 @@ const runner = require('./test-runner');
 
 const app = express();
 
-// SECURITY
-app.use(helmet());
+// --- CABECERAS PARA TÚNELES (LocalTunnel / Ngrok) ---
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  res.header("Bypass-Tunnel-Reminder", "true");
+  next();
+});
 
-app.use(
-  helmet.contentSecurityPolicy({
+// --- CONFIGURACIÓN DE SEGURIDAD (TEST 2) ---
+// El test exige específicamente que solo se carguen scripts y estilos de 'self'
+app.use(helmet({
+  contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'"]
+      styleSrc: ["'self'"],
     }
-  })
-);
+  }
+}));
 
-app.use(
-  '/public',
-  express.static(process.cwd() + '/public')
-);
-
-app.use(cors({ origin: '*' }));
+app.use('/public', express.static(process.cwd() + '/public'));
+app.use(cors({origin: '*'})); 
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(
-  bodyParser.urlencoded({
-    extended: true
-  })
-);
+app.route('/')
+  .get(function (req, res) {
+    res.sendFile(process.cwd() + '/views/index.html');
+  });
 
-// INDEX PAGE
-app.route('/').get(function (req, res) {
-  res.sendFile(
-    process.cwd() + '/views/index.html'
-  );
-});
-
-// FCC TEST ROUTES
 fccTestingRoutes(app);
-
-// API ROUTES
-apiRoutes(app);
-
-// 404
-app.use(function (req, res) {
-  res
-    .status(404)
-    .type('text')
-    .send('Not Found');
+apiRoutes(app);  
+    
+app.use(function(req, res, next) {
+  res.status(404).type('text').send('Not Found');
 });
 
-// START SERVER
-const listener = app.listen(
-  process.env.PORT || 3000,
-  function () {
-
-    console.log(
-      'Your app is listening on port ' +
-      listener.address().port
-    );
-
-    if (process.env.NODE_ENV === 'test') {
-
-      console.log('Running Tests...');
-
-      setTimeout(function () {
-
-        try {
-          runner.run();
-        } catch (e) {
-          console.log('Tests are not valid:');
-          console.error(e);
-        }
-
-      }, 3500);
-
-    }
-
+const listener = app.listen(process.env.PORT || 3000, function () {
+  console.log('Servidor listo en puerto ' + listener.address().port);
+  if(process.env.NODE_ENV==='test') {
+    console.log('Running Tests...');
+    setTimeout(function () {
+      try {
+        runner.run();
+      } catch(e) {
+        console.log('Tests are not valid:');
+        console.error(e);
+      }
+    }, 3500);
   }
-);
+});
 
 module.exports = app;
