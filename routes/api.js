@@ -13,107 +13,139 @@ function hashIP(ip) {
 }
 
 async function getStockData(symbol) {
-  const url = `https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/${symbol}/quote`;
 
-  const response = await axios.get(url);
+  const response = await axios.get(
+    `https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/${symbol}/quote`
+  );
 
   return {
     stock: response.data.symbol,
     price: response.data.latestPrice
   };
+
 }
 
 module.exports = function (app) {
 
-  app.route('/api/stock-prices')
-    .get(async function (req, res){
+  // FCC TEST ROUTE
+  app.get('/api/app-info', function(req, res) {
 
-      try {
+    res.json({
+      status: 'success'
+    });
 
-        let stock = req.query.stock;
-        let like = req.query.like;
+  });
 
-        const hashedIP = hashIP(req.ip);
+  // STOCK ROUTE
+  app.get('/api/stock-prices', async function(req, res) {
 
-        // TWO STOCKS
-        if (Array.isArray(stock)) {
+    try {
 
-          const results = [];
+      let stock = req.query.stock;
+      let like = req.query.like;
 
-          for (let s of stock) {
+      const hashedIP = hashIP(req.ip);
 
-            const data = await getStockData(s);
+      // TWO STOCKS
+      if (Array.isArray(stock)) {
 
-            if (!stocks[data.stock]) {
-              stocks[data.stock] = {
-                likes: []
-              };
-            }
+        const results = [];
 
-            if (
-              like === 'true' &&
-              !stocks[data.stock].likes.includes(hashedIP)
-            ) {
-              stocks[data.stock].likes.push(hashedIP);
-            }
+        for (const s of stock) {
 
-            results.push({
-              stock: data.stock,
-              price: data.price,
-              likes: stocks[data.stock].likes.length
-            });
+          const data = await getStockData(s);
+
+          if (!stocks[data.stock]) {
+
+            stocks[data.stock] = {
+              likes: []
+            };
+
           }
 
-          return res.json({
-            stockData: [
-              {
-                stock: results[0].stock,
-                price: results[0].price,
-                rel_likes:
-                  results[0].likes - results[1].likes
-              },
-              {
-                stock: results[1].stock,
-                price: results[1].price,
-                rel_likes:
-                  results[1].likes - results[0].likes
-              }
-            ]
-          });
-        }
+          if (
+            like === 'true' &&
+            !stocks[data.stock].likes.includes(hashedIP)
+          ) {
 
-        // ONE STOCK
-        const data = await getStockData(stock);
+            stocks[data.stock].likes.push(hashedIP);
 
-        if (!stocks[data.stock]) {
-          stocks[data.stock] = {
-            likes: []
-          };
-        }
+          }
 
-        if (
-          like === 'true' &&
-          !stocks[data.stock].likes.includes(hashedIP)
-        ) {
-          stocks[data.stock].likes.push(hashedIP);
-        }
-
-        return res.json({
-          stockData: {
+          results.push({
             stock: data.stock,
             price: data.price,
             likes: stocks[data.stock].likes.length
-          }
-        });
+          });
 
-      } catch (err) {
+        }
 
-        return res.status(500).json({
-          error: 'error fetching stock data'
+        return res.json({
+
+          stockData: [
+
+            {
+              stock: results[0].stock,
+              price: results[0].price,
+              rel_likes:
+                results[0].likes -
+                results[1].likes
+            },
+
+            {
+              stock: results[1].stock,
+              price: results[1].price,
+              rel_likes:
+                results[1].likes -
+                results[0].likes
+            }
+
+          ]
+
         });
 
       }
 
-    });
+      // ONE STOCK
+      const data = await getStockData(stock);
+
+      if (!stocks[data.stock]) {
+
+        stocks[data.stock] = {
+          likes: []
+        };
+
+      }
+
+      if (
+        like === 'true' &&
+        !stocks[data.stock].likes.includes(hashedIP)
+      ) {
+
+        stocks[data.stock].likes.push(hashedIP);
+
+      }
+
+      return res.json({
+
+        stockData: {
+          stock: data.stock,
+          price: data.price,
+          likes: stocks[data.stock].likes.length
+        }
+
+      });
+
+    } catch (err) {
+
+      console.error(err);
+
+      return res.status(500).json({
+        error: 'Server Error'
+      });
+
+    }
+
+  });
 
 };
