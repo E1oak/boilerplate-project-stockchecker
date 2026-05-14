@@ -16,17 +16,22 @@ const app = express();
 // SECURITY
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'"]
-      }
-    }
+    xPoweredBy: false
   })
 );
 
-app.use('/public', express.static(process.cwd() + '/public'));
+app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self';"
+  );
+  next();
+});
+
+app.use(
+  '/public',
+  express.static(process.cwd() + '/public')
+);
 
 app.use(cors({ origin: '*' }));
 
@@ -40,7 +45,9 @@ app.use(
 
 // INDEX PAGE
 app.route('/').get(function (req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
+  res.sendFile(
+    process.cwd() + '/views/index.html'
+  );
 });
 
 // FCC TEST ROUTES
