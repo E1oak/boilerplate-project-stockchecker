@@ -14,19 +14,17 @@ const runner = require('./test-runner');
 const app = express();
 
 // SECURITY
+app.use(helmet());
+
 app.use(
-  helmet({
-    xPoweredBy: false
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"]
+    }
   })
 );
-
-app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self';"
-  );
-  next();
-});
 
 app.use(
   '/public',
