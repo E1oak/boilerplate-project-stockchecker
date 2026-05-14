@@ -1,18 +1,16 @@
 'use strict';
-
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-
 const apiRoutes = require('./routes/api.js');
 const fccTestingRoutes = require('./routes/fcctesting.js');
 const runner = require('./test-runner');
 
 const app = express();
 
-// A. PARCHE DE RED (Para que Localtunnel no muera)
+// PARCHE DE RED PARA TÚNELES
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Bypass-Tunnel-Reminder");
@@ -20,7 +18,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// B. TEST 2: Helmet CSP (Sintaxis ultra-compatible)
+// TEST 2: Configuración de Helmet (Sintaxis específica para FCC)
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
@@ -45,17 +43,18 @@ app.use((req, res) => {
   res.status(404).type('text').send('Not Found');
 });
 
-const listener = app.listen(process.env.PORT || 3000, () => {
-  console.log('Servidor en puerto ' + listener.address().port);
+const port = process.env.PORT || 3000;
+const listener = app.listen(port, () => {
+  console.log('Puerto activo: ' + port);
   if (process.env.NODE_ENV === 'test') {
-    console.log('Ejecutando tests funcionales...');
+    console.log('Iniciando tests...');
     setTimeout(() => {
       try {
         runner.run();
       } catch(e) {
-        console.log('Error en tests');
+        console.log('Error en ejecución de tests');
       }
-    }, 3500);
+    }, 1500);
   }
 });
 
